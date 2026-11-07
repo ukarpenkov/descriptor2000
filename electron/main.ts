@@ -1,9 +1,12 @@
 import { app, BrowserWindow, ipcMain, dialog, clipboard } from 'electron';
 import { Worker } from 'node:worker_threads';
 import { join } from 'node:path';
-import { statSync, writeFileSync } from 'node:fs';
+import { statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createService } from './service';
 import { initialStatus, type Status, type Job, models } from '../src/shared';
+if(process.argv.includes('--smoke-test') && process.env.DESCRIPTOR_SMOKE_DATA){
+ mkdirSync(process.env.DESCRIPTOR_SMOKE_DATA,{recursive:true});app.setPath('userData',process.env.DESCRIPTOR_SMOKE_DATA);
+}
 let window:BrowserWindow; let worker:Worker|undefined; let status:Status={...initialStatus};
 function launch(data:{job?:Job; model:string}) {
  if(worker) throw new Error('Дождитесь завершения текущей операции');
@@ -27,7 +30,12 @@ app.whenReady().then(()=>{
  ipcMain.handle('save',async(_,text:string)=>{const r=await dialog.showSaveDialog(window,{defaultPath:'transcript.txt',filters:[{name:'Текст',extensions:['txt']}]});if(!r.canceled&&r.filePath){writeFileSync(r.filePath,text,'utf8');return true;}return false;});
  window=new BrowserWindow({width:1020,height:840,minWidth:700,minHeight:620,backgroundColor:'#ffffff',webPreferences:{preload:join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
  window.setMenuBarVisibility(false);window.webContents.setWindowOpenHandler(()=>({action:'deny'}));
- window.webContents.on('will-navigate',e=>e.preventDefault());window.loadFile(join(__dirname,'../dist/index.html'));
+ window.webContents.on('will-navigate',e=>e.preventDefault());window.loadFile(join(__dirname,'../dist/index.html')).then(async()=>{
+  if(process.argv.includes('--smoke-test')){
+   try{const {selfTest}=await import('./self-test');await selfTest(window);console.log('DESCRIPTOR_PACKAGED_SMOKE_OK');app.exit(0);}
+   catch(error){console.error(error);app.exit(1);}
+  }
+ }).catch(error=>{console.error(error);if(process.argv.includes('--smoke-test'))app.exit(1);});
 });
 app.on('window-all-closed',()=>{worker?.postMessage('cancel');app.quit();});
 app.on('before-quit',()=>worker?.postMessage('cancel'));

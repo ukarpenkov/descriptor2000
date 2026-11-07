@@ -17,11 +17,12 @@ npm run dev
 npm test
 npm run build
 npm run dist -- --publish never
+npm run test:packaged
 ```
 
 `release/` содержит установщик: DMG на macOS, NSIS EXE на Windows. После установки запуск обычной иконкой. Собирать под соответствующей ОС; `.github/workflows/build.yml` запускает обе платформы. Текущие сборки не подписаны; публичные установщики потребуют сертификатов Apple/Microsoft.
 
-## Реализовано в 0.1
+## Реализовано в 0.1.1
 
 - Whisper Tiny, Base, Small, CPU, квантование q8, загрузка и повторное использование моделей.
 - MP4, MP3, M4A, WAV, AAC, AMR, 3GP, OGG, OPUS, FLAC, MOV, MKV, WEBM, CAF, AIFF, WMA через комплектный FFmpeg. Конкретная поддержка зависит от кодека; зашифрованные файлы не поддерживаются.
@@ -48,3 +49,9 @@ FFmpeg извлекает моно PCM 16 kHz во временный катал
 ## Источники и лицензии
 
 [Transformers.js](https://huggingface.co/docs/transformers.js/), [Whisper ONNX](https://huggingface.co/onnx-community/whisper-tiny), [Elysia Node](https://elysiajs.com/integrations/node). Перед распространением проверьте лицензии всех поставляемых зависимостей и моделей. `ffmpeg-static` поставляет отдельный FFmpeg binary; его лицензия и конфигурация зависят от сборки. См. `THIRD_PARTY_NOTICES.md`.
+
+## Проверка установочной сборки
+
+`npm run test:packaged` копирует `.app` или `win-unpacked` во временный каталог вне проекта и запускает **собственный исполняемый файл** сборки с `--smoke-test`. Проверяются окно, preload/IPC и FFmpeg. Тестовые данные изолированы и удаляются. Не используйте загрузку `app.asar` через Electron из `node_modules` проекта: такой тест может незаметно разрешать отсутствующие зависимости из родительского checkout.
+
+Для проверки полного распознавания: `DESCRIPTOR_FIXTURE=/absolute/audio.wav DESCRIPTOR_TEST_CACHE=/absolute/model-cache npm run test:packaged`. Кэш необязателен: без него модель скачивается. Версия 0.1.1 явно включает runtime peer-зависимости Elysia, включая `@sinclair/typebox`, чтобы упаковщик не пропускал их.
