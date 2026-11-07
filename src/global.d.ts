@@ -1,0 +1,1 @@
+export {}; declare global {interface Window {desktop:{request:(path:string,body?:unknown)=>Promise<any>;pick:()=>Promise<string>;filePath:(file:File)=>string;copy:(text:string)=>Promise<void>;save:(text:string)=>Promise<boolean>}}}

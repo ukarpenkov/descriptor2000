@@ -1,0 +1,10 @@
+import {Worker} from 'node:worker_threads';
+import {resolve} from 'node:path';
+import {tmpdir} from 'node:os';
+if(!process.argv[2])throw new Error('Pass an audio fixture path');
+const worker=new Worker(resolve('dist-electron/worker.cjs'),{workerData:{job:{path:resolve(process.argv[2]),model:'tiny',language:'en',speakers:1,task:'transcribe'},model:'tiny',cache:resolve(process.env.DESCRIPTOR_TEST_CACHE||'.test-models'),temp:tmpdir()}});
+let phase='';let success=false;
+worker.on('message',s=>{if(s.phase!==phase){phase=s.phase;console.log(s.phase,s.message);}if(s.phase==='done'){console.log(JSON.stringify(s.segments));success=s.segments.some(x=>/hello|test|local|transcription/i.test(x.text));}if(s.phase==='error')console.error(s.message);});
+worker.on('error',e=>{console.error(e);process.exitCode=1;});
+worker.on('exit',()=>{if(!success)process.exitCode=1;});
+const timer=setTimeout(()=>{console.error('Timeout');worker.terminate();process.exitCode=1;},300000);worker.on('exit',()=>clearTimeout(timer));
