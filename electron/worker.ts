@@ -3,6 +3,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdtemp, rm, open, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import ffmpeg from 'ffmpeg-static';
+import { externalBinary } from './paths';
 import { models, initialStatus, type Job, type Status, type Segment } from '../src/shared';
 const {job,model,cache,temp}=workerData as {job?:Job;model:string;cache:string;temp:string};
 let cancelled=false;let child:ChildProcess|undefined;let state:Status={...initialStatus,model};
@@ -21,7 +22,7 @@ async function run(){
   update({phase:'decoding',percent:0,message:'Извлечение аудио…'});
   await new Promise<void>((resolve,reject)=>{
    if(!ffmpeg)return reject(new Error('FFmpeg отсутствует'));
-   const executable=ffmpeg.replace('app.asar/','app.asar.unpacked/');
+   const executable=externalBinary(ffmpeg);
    let error=''; child=spawn(executable,['-nostdin','-v','error','-i',job.path,'-vn','-ac','1','-ar','16000','-f','f32le','-y',pcm],{windowsHide:true});
    child.stderr!.on('data',d=>error=(error+d).slice(-3000));child.on('error',reject);child.on('close',code=>{child=undefined;code===0?resolve():reject(new Error(error||'Не удалось прочитать аудио'));});
   });check();

@@ -1,7 +1,14 @@
 const {app,BrowserWindow}=require('electron');
 const fs=require('node:fs');const path=require('node:path');
 app.setPath('userData',path.join(app.getPath('temp'),'descriptor2000-ui-smoke'));
-require(process.env.DESCRIPTOR_APP ? path.join(process.env.DESCRIPTOR_APP,'dist-electron/main.cjs') : '../dist-electron/main.cjs');
+require(process.env.DESCRIPTOR_APP ? path.resolve(process.env.DESCRIPTOR_APP,'dist-electron/main.cjs') : '../dist-electron/main.cjs');
+if(process.env.DESCRIPTOR_APP){
+ const ffmpeg=require(path.resolve(process.env.DESCRIPTOR_APP,'node_modules/ffmpeg-static'));
+ const executable=ffmpeg.replace(/app\.asar(?=[\\/])/g,'app.asar.unpacked');
+ const check=require('node:child_process').spawnSync(executable,['-version'],{windowsHide:true});
+ if(check.status!==0){console.error('Packaged FFmpeg failed',check.error,check.stderr?.toString());app.exit(1);}
+ console.log('Packaged FFmpeg passed');
+}
 const timeout=setTimeout(()=>{console.error('Desktop timeout');app.exit(1);},120000);
 app.whenReady().then(async()=>{
  try{
