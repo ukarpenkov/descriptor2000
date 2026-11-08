@@ -28,10 +28,10 @@
 
 ## Скачать программу
 
-Отдельного релиза с постоянной ссылкой нет. Установщик берётся из последней успешной сборки ветки `main`. На 8 ноября 2026 года это версия 0.1.2, коммит `782fc19`:
+Отдельного релиза с постоянной ссылкой нет. Установщик берётся из последней успешной сборки ветки `main`. На 8 ноября 2026 года это версия 2.0.0, коммит `9bd439b`:
 
-- [macOS, Apple Silicon](https://github.com/ukarpenkov/descriptor2000/actions/runs/42505052486/artifacts/13626742768) — архив с DMG;
-- [Windows, x64](https://github.com/ukarpenkov/descriptor2000/actions/runs/42505052486/artifacts/13627391475) — архив с EXE.
+- [macOS, Apple Silicon](https://github.com/ukarpenkov/descriptor2000/actions/runs/42506994310/artifacts/13627703431) — архив с DMG;
+- [Windows, x64](https://github.com/ukarpenkov/descriptor2000/actions/runs/42506994310/artifacts/13627713942) — архив с EXE.
 
 Скачивание требует учётной записи GitHub. GitHub отдаёт архив, внутри него файл установщика. Срок хранения артефакта ограничен. Когда ссылка перестанет открываться, откройте [список сборок](https://github.com/ukarpenkov/descriptor2000/actions/workflows/build.yml) и возьмите артефакты последней успешной сборки `Desktop builds`.
 
