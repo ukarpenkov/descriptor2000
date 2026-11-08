@@ -3,11 +3,18 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
 jobs:
   build:
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        include:
+          - os: macos-latest
+            installer: Descriptor2000-mac.dmg
+          - os: windows-latest
+            installer: Descriptor2000-windows.exe
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +32,31 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: descriptor2000-${{ matrix.os }}
-          path: |
-            release/*.dmg
-            release/*.exe
+          path: release/${{ matrix.installer }}
+          if-no-files-found: error
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: descriptor2000-*
+          path: installers
+          merge-multiple: true
+      - name: Publish latest installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          test -f installers/Descriptor2000-windows.exe
+          test -f installers/Descriptor2000-mac.dmg
+          version=$(node -p "require('./package.json').version")
+          short=$(printf '%s' "$GITHUB_SHA" | cut -c1-7)
+          tag="v${version}-${short}"
+          gh release create "$tag" \
+            installers/Descriptor2000-windows.exe \
+            installers/Descriptor2000-mac.dmg \
+            --title "Descriptor2000 ${version}" \
+            --notes "Сборка ${short} ветки main. Версия ${version}." \
+            --latest

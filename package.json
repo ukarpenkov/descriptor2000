@@ -1,6 +1,6 @@
 {
   "name": "descriptor2000",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Local audio and video transcription",
   "author": "ukarpenkov",
@@ -61,6 +61,7 @@
       "target": [
         "dmg"
       ],
+      "artifactName": "Descriptor2000-mac.${ext}",
       "category": "public.app-category.productivity",
       "icon": "build/icon.png"
     },
@@ -68,11 +69,13 @@
       "target": [
         "nsis"
       ],
+      "artifactName": "Descriptor2000-windows.${ext}",
       "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Descriptor2000-windows.${ext}"
     },
     "extraFiles": [
       {
