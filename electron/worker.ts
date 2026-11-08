@@ -1,9 +1,9 @@
 import { parentPort, workerData } from 'node:worker_threads';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdtemp, rm, open, stat } from 'node:fs/promises';
-import { join, sep } from 'node:path';
+import { join } from 'node:path';
 import ffmpeg from 'ffmpeg-static';
-import { externalBinary, ortWasmDir } from './paths';
+import { directoryFileUrl, externalBinary, ortWasmDir } from './paths';
 import { models, initialStatus, gigaamLimit, type Job, type Status, type Segment } from '../src/shared';
 const {job,model,cache,temp}=workerData as {job?:Job;model:string;cache:string;temp:string};
 let cancelled=false;let child:ChildProcess|undefined;let state:Status={...initialStatus,model};
@@ -18,7 +18,7 @@ type Piece={text:string;start:number;end:number};
 async function loadEngine(repo:string, engine:'whisper'|'gigaam'):Promise<(audio:Float32Array)=>Promise<Piece[]>>{
  if(engine==='gigaam'){
   const {configureOrtWeb,loadHuggingfaceModel}=await import('onnx-asr-web/node');
-  configureOrtWeb({wasmPaths:ortWasmDir(__filename)+sep,numThreads:1});
+  configureOrtWeb({wasmPaths:directoryFileUrl(ortWasmDir(__filename)),numThreads:1});
   update({phase:'loading',message:'Подготовка GigaAM…',percent:0});
   const asr=await loadHuggingfaceModel(repo,{cacheDir:cache,quantization:'int8',fetch:trackingFetch()});
   return async audio=>{const result=await asr.transcribeSamples(audio,16000);const text=result.text.trim();return text?[{text,start:0,end:audio.length/16000}]:[];};

@@ -1,7 +1,14 @@
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 // Executables must run outside ASAR on both Windows and macOS.
 export const externalBinary = (path:string) => path.replace(/app\.asar(?=[\\/])/g,'app.asar.unpacked');
+// Node's ESM loader rejects a Windows path such as C:\... as protocol "c:".
+export function directoryFileUrl(directory:string) {
+ const url=pathToFileURL(directory);
+ if(!url.pathname.endsWith('/')) url.pathname+='/';
+ return url.href;
+}
 export function moduleDir(fromFile:string, name:string) {
  let dir=dirname(fromFile);
  while(true){
