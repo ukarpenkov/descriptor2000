@@ -4,5 +4,6 @@ contextBridge.exposeInMainWorld('desktop',{
  pick:()=>ipcRenderer.invoke('pick'),
  filePath:(file:File)=>webUtils.getPathForFile(file),
  copy:(text:string)=>ipcRenderer.invoke('copy',text),
- save:(text:string)=>ipcRenderer.invoke('save',text)
+ save:(text:string)=>ipcRenderer.invoke('save',text),
+ version:()=>ipcRenderer.invoke('version')
 });

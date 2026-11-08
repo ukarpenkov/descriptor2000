@@ -28,6 +28,7 @@ app.whenReady().then(()=>{
  ipcMain.handle('pick',async()=>{const r=await dialog.showOpenDialog(window,{properties:['openFile'],filters:[{name:'Аудио и видео',extensions:['mp4','mp3','m4a','wav','aac','amr','3gp','ogg','opus','flac','webm','mov','mkv','aiff','caf','wma']} ]});return r.canceled?'':r.filePaths[0];});
  ipcMain.handle('copy',(_,text:string)=>clipboard.writeText(text));
  ipcMain.handle('save',async(_,text:string)=>{const r=await dialog.showSaveDialog(window,{defaultPath:'transcript.txt',filters:[{name:'Текст',extensions:['txt']}]});if(!r.canceled&&r.filePath){writeFileSync(r.filePath,text,'utf8');return true;}return false;});
+ ipcMain.handle('version',()=>app.getVersion());
  window=new BrowserWindow({width:1020,height:840,minWidth:700,minHeight:620,backgroundColor:'#ffffff',webPreferences:{preload:join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
  window.setMenuBarVisibility(false);window.webContents.setWindowOpenHandler(()=>({action:'deny'}));
  window.webContents.on('will-navigate',e=>e.preventDefault());window.loadFile(join(__dirname,'../dist/index.html')).then(async()=>{
