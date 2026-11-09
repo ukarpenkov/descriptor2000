@@ -5,11 +5,19 @@ export const models = [
   { id:'small', name:'Whisper Small', note:'Точнее · больше памяти', repo:'onnx-community/whisper-small', engine:'whisper' }
 ] as const;
 export const languages = [{id:'auto',label:'Автоматически'}, {id:'ru',label:'Русский'}, {id:'en',label:'English'}, {id:'es',label:'Español'}, {id:'fr',label:'Français'}, {id:'de',label:'Deutsch'}];
+export const pathLimit = 30;
 export type Segment = {start:number; end:number; text:string; speaker?:number};
-export type Status = {phase:'idle'|'loading'|'decoding'|'transcribing'|'done'|'cancelled'|'error'; percent:number; message:string; segments:Segment[]; model?:string};
-export type Job = {path:string; model:string; language:string; speakers:number; task:'transcribe'|'translate'};
-export const initialStatus:Status = {phase:'idle',percent:0,message:'Готов к работе',segments:[]};
+export type FileTranscript = {path:string; segments:Segment[]};
+export type Status = {phase:'idle'|'loading'|'decoding'|'transcribing'|'done'|'cancelled'|'error'; percent:number; message:string; segments:Segment[]; results:FileTranscript[]; model?:string; file?:string; index?:number; total?:number};
+export type Job = {paths:string[]; model:string; language:string; speakers:number; task:'transcribe'|'translate'};
+export const initialStatus:Status = {phase:'idle',percent:0,message:'Готов к работе',segments:[],results:[]};
 export const formatTime = (seconds:number) => { const s=Math.floor(seconds); return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`; };
+export function txtName(filePath:string) {
+ const base=(filePath.split(/[\\/]/).pop()||'transcript').replace(/\.txt$/i,'');
+ const stem=base.replace(/\.[^.]+$/,'')||'transcript';
+ const clean=stem.replace(/[<>:"/\\|?*\u0000-\u001f]/g,'_').replace(/^\.+/,'').slice(0,80)||'transcript';
+ return `${clean}.txt`;
+}
 export const transcript = (segments:Segment[], speakers:number) => segments.map(s=>{
  const body=s.text.trim();
  if(s.speaker) return `[${formatTime(s.start)}] Говорящий ${s.speaker}: ${body}`;

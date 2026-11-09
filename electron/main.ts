@@ -1,9 +1,9 @@
 import { app, BrowserWindow, ipcMain, dialog, clipboard } from 'electron';
 import { Worker } from 'node:worker_threads';
 import { join } from 'node:path';
-import { statSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createService } from './service';
-import { initialStatus, type Status, type Job, models } from '../src/shared';
+import { initialStatus, pathLimit, txtName, type Status, type Job, models } from '../src/shared';
 if(process.argv.includes('--smoke-test') && process.env.DESCRIPTOR_SMOKE_DATA){
  mkdirSync(process.env.DESCRIPTOR_SMOKE_DATA,{recursive:true});app.setPath('userData',process.env.DESCRIPTOR_SMOKE_DATA);
 }
@@ -11,7 +11,7 @@ let window:BrowserWindow; let worker:Worker|undefined; let status:Status={...ini
 function launch(data:{job?:Job; model:string}) {
  if(worker) throw new Error('Дождитесь завершения текущей операции');
  if(!models.some(m=>m.id===data.model)) throw new Error('Неизвестная модель');
- if(data.job && !statSync(data.job.path).isFile()) throw new Error('Укажите файл');
+ if(data.job){for(const file of data.job.paths) if(!statSync(file).isFile()) throw new Error('Укажите файл');}
  status={...initialStatus,phase:'loading',message:'Загрузка модели…',model:data.model};
  const current=new Worker(join(__dirname,'worker.cjs'),{workerData:{...data,cache:join(app.getPath('userData'),'models'),temp:app.getPath('temp')}}); worker=current;
  current.on('message',(next:Status)=>{status=next;});
@@ -25,9 +25,23 @@ app.whenReady().then(()=>{
   const response=await api.handle(new Request(`http://localhost${path}`,{method:body!==undefined || path==='/cancel'?'POST':'GET',headers:{'content-type':'application/json'},...(body!==undefined?{body:JSON.stringify(body)}:{})}));
   const value=await response.json(); if(!response.ok)throw new Error(value.error || 'Некорректные параметры');return value;
  });
- ipcMain.handle('pick',async()=>{const r=await dialog.showOpenDialog(window,{properties:['openFile'],filters:[{name:'Аудио и видео',extensions:['mp4','mp3','m4a','wav','aac','amr','3gp','ogg','opus','flac','webm','mov','mkv','aiff','caf','wma']} ]});return r.canceled?'':r.filePaths[0];});
+ ipcMain.handle('pick',async()=>{const r=await dialog.showOpenDialog(window,{properties:['openFile','multiSelections'],filters:[{name:'Аудио и видео',extensions:['mp4','mp3','m4a','wav','aac','amr','3gp','ogg','opus','flac','webm','mov','mkv','aiff','caf','wma']} ]});return r.canceled?[]:r.filePaths;});
  ipcMain.handle('copy',(_,text:string)=>clipboard.writeText(text));
- ipcMain.handle('save',async(_,text:string)=>{const r=await dialog.showSaveDialog(window,{defaultPath:'transcript.txt',filters:[{name:'Текст',extensions:['txt']}]});if(!r.canceled&&r.filePath){writeFileSync(r.filePath,text,'utf8');return true;}return false;});
+ ipcMain.handle('save',async(_,text:string,name?:string)=>{const r=await dialog.showSaveDialog(window,{defaultPath:txtName(name||'transcript.txt'),filters:[{name:'Текст',extensions:['txt']}]});if(!r.canceled&&r.filePath){writeFileSync(r.filePath,text,'utf8');return true;}return false;});
+ ipcMain.handle('save-all',async(_,files:{name?:string;text?:string}[])=>{
+  if(!Array.isArray(files)||!files.length||files.length>pathLimit)return false;
+  const chosen=await dialog.showOpenDialog(window,{properties:['openDirectory','createDirectory']});
+  if(chosen.canceled||!chosen.filePaths[0])return false;
+  const dir=chosen.filePaths[0]; const used=new Set<string>();
+  for(const file of files){
+   if(typeof file?.text!=='string'||!file.text)continue;
+   const stem=txtName(typeof file.name==='string'?file.name:'transcript').slice(0,-4);
+   let name=`${stem}.txt`; let n=2;
+   while(used.has(name.toLowerCase())||existsSync(join(dir,name))){name=`${stem}-${n}.txt`;n+=1;}
+   used.add(name.toLowerCase()); writeFileSync(join(dir,name),file.text,'utf8');
+  }
+  return true;
+ });
  ipcMain.handle('version',()=>app.getVersion());
  window=new BrowserWindow({width:1020,height:840,minWidth:700,minHeight:620,backgroundColor:'#ffffff',webPreferences:{preload:join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
  window.setMenuBarVisibility(false);window.webContents.setWindowOpenHandler(()=>({action:'deny'}));

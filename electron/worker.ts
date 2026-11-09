@@ -32,29 +32,40 @@ async function loadEngine(repo:string, engine:'whisper'|'gigaam'):Promise<(audio
   return (result.chunks||[{text:result.text,timestamp:[0,audio.length/16000]}]).filter((chunk:any)=>chunk.text.trim()).map((chunk:any)=>({text:chunk.text.trim(),start:chunk.timestamp[0]||0,end:chunk.timestamp[1]??audio.length/16000}));
  };
 }
-async function run(){
- const selected=models.find(m=>m.id===model)!;
- if(job){const limit=gigaamLimit(model,job.language,job.task);if(limit)throw new Error(limit);}
- const transcribe=await loadEngine(selected.repo,selected.engine);check();
- if(!job){update({phase:'done',percent:100,message:'Модель скачана и готова'});return;}
+function baseName(input:string){return input.split(/[\\/]/).pop()||input;}
+async function transcribeFile(transcribe:(audio:Float32Array)=>Promise<Piece[]>, input:string, index:number, total:number){
  const directory=await mkdtemp(join(temp,'descriptor2000-'));const pcm=join(directory,'audio.pcm');
+ const prefix=total>1?`${index+1} из ${total} · ${baseName(input)} · `:'';
+ const span=(inner:number)=>Math.floor((index+inner/100)/total*100);
  try{
-  update({phase:'decoding',percent:0,message:'Извлечение аудио…'});
+  update({phase:'decoding',percent:span(0),message:`${prefix}Извлечение аудио…`,file:input,index,total});
   await new Promise<void>((resolve,reject)=>{
    if(!ffmpeg)return reject(new Error('FFmpeg отсутствует'));
    const executable=externalBinary(ffmpeg);
-   let error=''; child=spawn(executable,['-nostdin','-v','error','-i',job.path,'-vn','-ac','1','-ar','16000','-f','f32le','-y',pcm],{windowsHide:true});
+   let error=''; child=spawn(executable,['-nostdin','-v','error','-i',input,'-vn','-ac','1','-ar','16000','-f','f32le','-y',pcm],{windowsHide:true});
    child.stderr!.on('data',d=>error=(error+d).slice(-3000));child.on('error',reject);child.on('close',code=>{child=undefined;code===0?resolve():reject(new Error(error||'Не удалось прочитать аудио'));});
   });check();
   const size=(await stat(pcm)).size; if(!size)throw new Error('В файле нет аудиодорожки');
   const file=await open(pcm,'r');const segments:Segment[]=[]; const bytesPerChunk=16000*4*25;
   try{for(let position=0;position<size;position+=bytesPerChunk){check();const buffer=Buffer.alloc(Math.min(bytesPerChunk,size-position));const {bytesRead}=await file.read(buffer,0,buffer.length,position);const audio=new Float32Array(bytesRead/4);for(let i=0;i<audio.length;i++)audio[i]=buffer.readFloatLE(i*4);
-   update({phase:'transcribing',percent:Math.floor(position/size*100),message:'Распознавание речи…'});
+   update({phase:'transcribing',percent:span(Math.floor(position/size*100)),message:`${prefix}Распознавание речи…`,file:input,index,total});
    const offset=position/64000; const pieces=await transcribe(audio);check();
-   for(const piece of pieces)segments.push({start:offset+piece.start,end:offset+piece.end,text:piece.text,...(job.speakers===1?{speaker:1}:{})});
-   update({segments:[...segments],percent:Math.floor(Math.min(position+bytesRead,size)/size*100)});
+   for(const piece of pieces)segments.push({start:offset+piece.start,end:offset+piece.end,text:piece.text,...(job!.speakers===1?{speaker:1}:{})});
+   update({segments:[...segments],percent:span(Math.floor(Math.min(position+bytesRead,size)/size*100))});
   }}finally{await file.close();}
-  update({phase:'done',percent:100,message:'Расшифровка готова'});
+  update({results:[...state.results,{path:input,segments}],segments:[],percent:span(100),file:input,index,total});
  }finally{await rm(directory,{recursive:true,force:true});}
+}
+async function run(){
+ const selected=models.find(m=>m.id===model)!;
+ if(job){const limit=gigaamLimit(model,job.language,job.task);if(limit)throw new Error(limit);}
+ const transcribe=await loadEngine(selected.repo,selected.engine);check();
+ if(!job){update({phase:'done',percent:100,message:'Модель скачана и готова'});return;}
+ for(let index=0;index<job.paths.length;index++){
+  check();
+  try{await transcribeFile(transcribe,job.paths[index],index,job.paths.length);}
+  catch(e){if(cancelled||(e instanceof Error&&e.message==='CANCELLED'))throw e;const message=e instanceof Error?e.message:String(e);throw new Error(job.paths.length>1?`${baseName(job.paths[index])}: ${message}`:message);}
+ }
+ update({phase:'done',percent:100,message:'Расшифровка готова',segments:[]});
 }
 run().catch(e=>update({phase:cancelled?'cancelled':'error',message:cancelled?'Операция отменена':String(e.message)})).finally(()=>parentPort!.close());

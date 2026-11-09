@@ -9,7 +9,7 @@ export async function selfTest(window:BrowserWindow){
  const state=await window.webContents.executeJavaScript(`(async()=>({status:await window.desktop.request('/status'),text:document.body.innerText}))()`);
  if(state.status.phase!=='idle'||!state.text.includes('01. Запись'))throw new Error('Renderer or IPC unavailable');
  if(process.env.DESCRIPTOR_FIXTURE){
-  const job={path:process.env.DESCRIPTOR_FIXTURE,model:'tiny',language:'en',speakers:1,task:'transcribe'};
+  const job={paths:[process.env.DESCRIPTOR_FIXTURE],model:'tiny',language:'en',speakers:1,task:'transcribe'};
   await window.webContents.executeJavaScript(`window.desktop.request('/jobs',${JSON.stringify(job)})`);
   let status;
   do{await new Promise(resolve=>setTimeout(resolve,200));status=await window.webContents.executeJavaScript("window.desktop.request('/status')");}while(['loading','decoding','transcribing'].includes(status.phase));
