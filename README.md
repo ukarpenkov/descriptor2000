@@ -28,7 +28,7 @@
 
 ## Скачать программу
 
-Текущая версия — 3.0.0. После каждой успешной сборки ветки `main` публикуется релиз, и ссылки ниже начинают отдавать уже его файлы. Скачивается сам установщик, без архива и без входа в GitHub.
+Текущая версия — 3.0.1. После каждой успешной сборки ветки `main` публикуется релиз, и ссылки ниже начинают отдавать уже его файлы. Скачивается сам установщик, без архива и без входа в GitHub.
 
 - [Windows, x64](https://github.com/ukarpenkov/descriptor2000/releases/latest/download/Descriptor2000-windows.exe) — файл EXE;
 - [macOS, Apple Silicon](https://github.com/ukarpenkov/descriptor2000/releases/latest/download/Descriptor2000-mac.dmg) — файл DMG.
