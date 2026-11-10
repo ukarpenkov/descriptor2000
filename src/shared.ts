@@ -20,8 +20,9 @@ export function txtName(filePath:string) {
 }
 export const transcript = (segments:Segment[], speakers:number) => segments.map(s=>{
  const body=s.text.trim();
- if(s.speaker) return `[${formatTime(s.start)}] Говорящий ${s.speaker}: ${body}`;
- return speakers>1 ? `[${formatTime(s.start)}] ${body}` : body;
+ const time=`[${formatTime(s.start)}]`;
+ if(speakers>1 && s.speaker) return `${time} Говорящий ${s.speaker}: ${body}`;
+ return `${time} ${body}`;
 }).join('\n\n');
 export function gigaamLimit(model:string, language:string, task:string) {
  const selected=models.find(m=>m.id===model);

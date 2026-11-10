@@ -50,7 +50,7 @@ async function transcribeFile(transcribe:(audio:Float32Array)=>Promise<Piece[]>,
   try{for(let position=0;position<size;position+=bytesPerChunk){check();const buffer=Buffer.alloc(Math.min(bytesPerChunk,size-position));const {bytesRead}=await file.read(buffer,0,buffer.length,position);const audio=new Float32Array(bytesRead/4);for(let i=0;i<audio.length;i++)audio[i]=buffer.readFloatLE(i*4);
    update({phase:'transcribing',percent:span(Math.floor(position/size*100)),message:`${prefix}Распознавание речи…`,file:input,index,total});
    const offset=position/64000; const pieces=await transcribe(audio);check();
-   for(const piece of pieces)segments.push({start:offset+piece.start,end:offset+piece.end,text:piece.text,...(job!.speakers===1?{speaker:1}:{})});
+   for(const piece of pieces)segments.push({start:offset+piece.start,end:offset+piece.end,text:piece.text});
    update({segments:[...segments],percent:span(Math.floor(Math.min(position+bytesRead,size)/size*100))});
   }}finally{await file.close();}
   update({results:[...state.results,{path:input,segments}],segments:[],percent:span(100),file:input,index,total});
