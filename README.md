@@ -1,66 +1,43 @@
 # Descriptor2000
 
-Настольная программа для локальной расшифровки аудио и видео. Запись не отправляется в облако. Распознавание выполняется на компьютере пользователя.
+Desktop application for local transcription of audio and video. Files stay on the machine. Speech recognition runs on the CPU. The interface is in Russian. License: MIT. Third-party notices: `THIRD_PARTY_NOTICES.md`.
 
-Интерфейс на русском языке. Код распространяется по лицензии MIT. Сторонние компоненты перечислены в `THIRD_PARTY_NOTICES.md`.
+Current release: 3.0.2. A successful build of `main` publishes a new GitHub release, and the links below point at that release. While a build is still running, the links serve the previous release. Build status: [Desktop builds](https://github.com/ukarpenkov/descriptor2000/actions/workflows/build.yml).
 
-## Для каких устройств
+## Download
 
-Программа рассчитана на настольный компьютер или ноутбук с одной из двух систем:
+Installers are unsigned. macOS builds run on Apple Silicon (`macos-latest`). Windows builds are x64 NSIS (`windows-latest`). There is no Intel macOS, Windows ARM, Linux, mobile, or browser build.
 
-| Система | Процессор | Установщик |
-| --- | --- | --- |
-| macOS | Apple Silicon (arm64) | DMG |
-| Windows | 64-разрядный x64 | EXE, установщик NSIS |
+- [Windows, x64](https://github.com/ukarpenkov/descriptor2000/releases/latest/download/Descriptor2000-windows.exe)
+- [macOS, Apple Silicon](https://github.com/ukarpenkov/descriptor2000/releases/latest/download/Descriptor2000-mac.dmg)
 
-Сборки под другие платформы не выпускаются. Не подходят:
+### macOS
 
-- macOS на процессоре Intel;
-- Windows на ARM;
-- Linux;
-- iPhone, iPad, Android и браузер.
-
-Публичные файлы собирает [Desktop builds](https://github.com/ukarpenkov/descriptor2000/actions/workflows/build.yml): macOS — на `macos-latest` (Apple Silicon), Windows — на `windows-latest` (x64). Сборщик ставит архитектуру той машины, на которой запущен. Универсального DMG и отдельной сборки под Intel нет.
-
-Для работы нужен интернет при первой загрузке модели. После этого модель хранится локально, в каталоге `models` внутри данных приложения Electron. Временные файлы извлечённого аудио занимают около 230 МБ на час записи. Распознавание идёт на процессоре, без видеокарты.
-
-Установщики не подписаны. На Windows система покажет предупреждение при первом запуске. На macOS Finder откажется открывать приложение, пока на него не поставят локальную подпись — шаги в разделе установки. Это ожидаемо, пока нет сертификатов Apple и Microsoft.
-
-## Скачать программу
-
-Текущая версия — 3.0.2. После каждой успешной сборки ветки `main` публикуется релиз, и ссылки ниже начинают отдавать уже его файлы. Скачивается сам установщик, без архива и без входа в GitHub.
-
-- [Windows, x64](https://github.com/ukarpenkov/descriptor2000/releases/latest/download/Descriptor2000-windows.exe) — файл EXE;
-- [macOS, Apple Silicon](https://github.com/ukarpenkov/descriptor2000/releases/latest/download/Descriptor2000-mac.dmg) — файл DMG.
-
-Пока новая сборка ещё идёт, ссылки отдают предыдущий успешный релиз. Ход сборок: [Desktop builds](https://github.com/ukarpenkov/descriptor2000/actions/workflows/build.yml).
-
-### Установка на macOS
-
-1. Скачайте DMG и откройте его.
-2. Перетащите `Descriptor2000` в папку «Программы».
-3. Первый запуск из Finder не пройдёт. Система напишет, что приложение невозможно открыть и его нужно переместить в корзину. Файл при этом целый: у сборки нет сертификата Apple, и macOS блокирует скачанное приложение. Подтверждение в «Конфиденциальность и безопасность» и пункт «Открыть» в контекстном меню этот запрет не снимают.
-4. Откройте «Терминал» и выполните команду. Она ставит локальную подпись на уже скопированное приложение. Сертификат разработчика для этого не нужен:
+Open the DMG and copy `Descriptor2000` to Applications. Gatekeeper blocks the first launch because the app has no Apple certificate. The Privacy & Security confirmation and the Finder Open item do not clear that block. Sign the copied app locally, then launch it from the icon. Repeat the command after replacing the app:
 
 ```sh
 codesign --force --deep --sign - /Applications/Descriptor2000.app
 ```
 
-Если приложение лежит в другом месте, подставьте его путь вместо `/Applications/Descriptor2000.app`.
+### Windows
 
-5. После этого программа запускается обычной иконкой. Команду нужно повторить, если вы снова скачаете DMG и замените приложение в «Программах».
+Run the EXE. The installer asks for a directory (`oneClick` is off). If SmartScreen blocks the file, choose More info, then Run anyway. The app starts from the Start menu.
 
-### Установка на Windows
+The first model download needs a network connection. Models are stored under `models` in the Electron user-data directory. Extracted PCM uses about 230 MB of temporary disk per hour of audio and is removed when the job finishes or is cancelled.
 
-1. Скачайте EXE и запустите его. Установщик спросит каталог: установка в один щелчок отключена.
-2. SmartScreen может заблокировать файл, потому что подписи нет. В окне предупреждения выберите «Подробнее», затем «Выполнить в любом случае».
-3. После установки программа запускается из меню «Пуск».
+## Stack
 
-## Установить репозиторий
+Electron 39, React 19, TypeScript, Vite 7. Packaged with electron-builder. Node.js 24 (`.nvmrc`).
 
-Репозиторий нужен, чтобы запустить программу из исходников или собрать установщик самостоятельно. Для обычного использования достаточно установщика из предыдущего раздела.
+Recognition runs in a worker thread, off the UI thread. FFmpeg (`ffmpeg-static`) writes mono float32 PCM at 16 kHz. The worker reads 25-second chunks. GigaAM v3 (`istupakov/gigaam-v3-onnx`, int8, about 230 MB) is loaded with `onnx-asr-web`. It transcribes Russian only and does not translate. Whisper Tiny, Base, and Small (`onnx-community/whisper-*`) are loaded with `@huggingface/transformers` at `q8` on CPU. Whisper languages: automatic, Russian, English, Spanish, French, German. Whisper can translate speech into English.
 
-Нужны Git, Node.js 24 и npm. Версия Node.js зафиксирована в `.nvmrc`. Собирать следует на той системе, для которой нужен установщик: macOS или Windows. Клонирование на неподдерживаемую систему не даст рабочего приложения.
+The renderer has no Node.js access. Preload exposes a small IPC surface. `electron/service.ts` is an Elysia app (`elysia`, `@elysiajs/node`, `@sinclair/typebox`) called with `app.handle(Request)` in-process. No TCP port is opened.
+
+Accepted extensions: MP4, MP3, M4A, WAV, AAC, AMR, 3GP, OGG, OPUS, FLAC, MOV, MKV, WEBM, CAF, AIFF, WMA. Support depends on the codec. Encrypted files are rejected. Up to 30 files per job. Output is timestamped plain text, copied or saved as TXT. Light and dark themes.
+
+## Run from source
+
+Git, Node.js 24, and npm. Build on the operating system you need an installer for.
 
 ```sh
 git clone https://github.com/ukarpenkov/descriptor2000.git
@@ -69,9 +46,9 @@ npm ci
 npm run dev
 ```
 
-`npm run dev` собирает проект и открывает одно окно. Выберите или перетащите файл, укажите язык и модель, нажмите «Расшифровать». Первое использование скачивает выбранную модель: GigaAM v3 или ONNX Whisper. Отдельная кнопка позволяет скачать модель заранее. Готовый текст открывается в отдельном окне: там его можно править, копировать и сохранить.
+`npm run dev` typechecks, builds, and opens one window. Pick or drop files, choose a model and language, then start transcription. The model button downloads or checks the selected model before a job.
 
-Сборка установщика на текущей системе:
+Installer for the current OS (`release/`):
 
 ```sh
 npm test
@@ -79,39 +56,3 @@ npm run build
 npm run dist -- --publish never
 npm run test:packaged
 ```
-
-Каталог `release/` содержит DMG на macOS и EXE на Windows.
-
-## Реализовано в 2.1
-
-- На Windows загрузка GigaAM в установленном приложении больше не обрывается: каталог WASM передаётся как `file://` URL, а не как путь `C:\...`, который загрузчик ESM не принимает.
-- GigaAM v3 (ONNX, int8, около 230 МБ) и Whisper Tiny, Base, Small. Whisper работает на CPU с квантованием q8. Модель выбирается в списке «Локальная модель» и скачивается кнопкой «Скачать / проверить модель». GigaAM берётся с Hugging Face (`istupakov/gigaam-v3-onnx`): это русская модель, перевод и другие языки для неё недоступны. Whisper остаётся для остальных языков. После скачивания модель используется повторно.
-- MP4, MP3, M4A, WAV, AAC, AMR, 3GP, OGG, OPUS, FLAC, MOV, MKV, WEBM, CAF, AIFF, WMA через комплектный FFmpeg. Конкретная поддержка зависит от кодека; зашифрованные файлы не поддерживаются.
-- Русский, английский, испанский, французский, немецкий и определение языка.
-- Расшифровка на исходном языке; опциональный перевод речи на английский средствами Whisper.
-- Готовый текст открывается в окне: у каждой реплики указано время. Реплики не правятся и говорящий не выбирается вручную. Автоматического разделения голосов пока нет, поэтому имя говорящего в текст не пишется.
-- Процент распознавания по обработанной длительности, прогресс загрузки текущего файла модели, неопределённый индикатор извлечения аудио. Отмена между этапами и фрагментами; текущая операция ONNX может завершиться перед отменой.
-- Редактирование, копирование результата, сохранение TXT, чёрная и белая темы.
-
-## Архитектура
-
-`electron/main.ts` управляет окном, файловыми диалогами и очередью из одной операции. Изолированный preload предоставляет ограниченный IPC. `electron/service.ts` содержит Elysia API с валидацией параметров. Вызовы маршрутизируются через `app.handle(Request)` внутри процесса: TCP-порт не открывается. `electron/worker.ts` запускает FFmpeg и локальный ONNX inference вне UI-потока. Renderer не имеет доступа к Node.js.
-
-FFmpeg извлекает моно PCM 16 kHz во временный каталог; worker читает фрагменты по 25 секунд. Оперативная память для аудио ограничена размером фрагмента, временный диск должен вмещать около 230 МБ на час записи. Фрагменты независимы, поэтому слова на границах могут теряться и контекст между фрагментами не сохраняется. Временные файлы удаляются в `finally` при обычном завершении или отмене; после аварийного завершения ОС временный каталог может остаться.
-
-## Следующие этапы
-
-- Автоматическая диаризация с локальными speaker embeddings и настройкой числа говорящих.
-- Перевод готового текста между всеми пятью языками отдельной загружаемой моделью. Сейчас перевод только на английский.
-- Переключение языка самого интерфейса (сейчас русский).
-- VAD, перекрытие фрагментов, история проектов, SRT/VTT, управление кэшем моделей, подписанные установщики и обновления.
-
-## Источники и лицензии
-
-[Transformers.js](https://huggingface.co/docs/transformers.js/), [Whisper ONNX](https://huggingface.co/onnx-community/whisper-tiny), [Elysia Node](https://elysiajs.com/integrations/node). Перед распространением проверьте лицензии всех поставляемых зависимостей и моделей. `ffmpeg-static` поставляет отдельный FFmpeg binary; его лицензия и конфигурация зависят от сборки. См. `THIRD_PARTY_NOTICES.md`.
-
-## Проверка установочной сборки
-
-`npm run test:packaged` копирует `.app` или `win-unpacked` во временный каталог вне проекта и запускает собственный исполняемый файл сборки с `--smoke-test`. Проверяются окно, preload/IPC и FFmpeg. Тестовые данные изолированы и удаляются. Не используйте загрузку `app.asar` через Electron из `node_modules` проекта: такой тест может незаметно разрешать отсутствующие зависимости из родительского checkout.
-
-Для проверки полного распознавания: `DESCRIPTOR_FIXTURE=/absolute/audio.wav DESCRIPTOR_TEST_CACHE=/absolute/model-cache npm run test:packaged`. Кэш необязателен: без него модель скачивается. Сборка явно включает runtime peer-зависимости Elysia, включая `@sinclair/typebox`, чтобы упаковщик не пропускал их.
